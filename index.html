@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>떠오르는데마시아 - 완전판</title>
+    <title>데마시아 최적화 분석기 (식량 복구판)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <style>
@@ -16,61 +16,85 @@
         .hero-star { fill: #fbbf24; font-size: 16px; font-weight: 900; pointer-events: none; }
         .build-info { fill: #94a3b8; font-size: 9px; font-weight: 500; pointer-events: none; }
         .canvas-prod { fill: #fbbf24; font-size: 10px; font-weight: 700; pointer-events: none; text-shadow: 1px 1px 2px #000; }
-        .editor-glass { background: rgba(15, 23, 42, 0.98); border-left: 1px solid rgba(255,255,255,0.1); }
         .config-panel { background: rgba(30, 41, 59, 0.8); backdrop-filter: blur(10px); border-top: 1px solid rgba(255,255,255,0.1); }
-        .res-card { background: rgba(30, 41, 59, 0.5); border: 1px solid rgba(255,255,255,0.1); border-radius: 0.75rem; padding: 0.6rem 1rem; min-width: 110px; }
+        .res-card { background: rgba(30, 41, 59, 0.5); border: 1px solid rgba(255,255,255,0.1); border-radius: 0.75rem; padding: 0.6rem 1rem; min-width: 100px; }
+        .bottleneck { border: 2px solid #ef4444 !important; background: rgba(239, 68, 68, 0.1) !important; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+        .bottleneck-text { color: #ef4444; font-weight: 900; animation: pulse 1s infinite; }
     </style>
 </head>
 <body>
 
-    <header class="h-20 flex items-center justify-between px-8 bg-slate-900/50 border-b border-slate-800 z-10 backdrop-blur-md">
-        <div>
-            <h1 class="text-xl font-black text-blue-500 tracking-tighter italic">떠오르는데마시아</h1>
-            <div id="ratio-info" class="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-0.5"></div>
+    <header class="h-20 flex items-center justify-between px-8 bg-slate-900/50 border-b border-slate-800 z-10">
+        <div class="flex items-center gap-8">
+            <div>
+                <h1 class="text-xl font-black text-blue-500 italic">DEMACIA OPTIMIZER</h1>
+                <p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Balanced Growth System</p>
+            </div>
+            <div class="relative bg-blue-500/10 px-6 py-2 rounded-xl border border-blue-500/30 text-center">
+                <p class="text-[9px] font-black text-blue-400 uppercase tracking-widest">Balanced Score</p>
+                <div id="final-score" class="text-3xl font-black text-white font-mono">0</div>
+            </div>
         </div>
-        <div id="total-summary" class="flex gap-3"></div>
+        <div id="total-summary" class="flex gap-2"></div>
     </header>
 
     <div class="flex-grow flex overflow-hidden">
-        <main class="relative flex-grow bg-[#050814] flex flex-col">
-            <div class="flex-grow relative"><svg id="network-map" class="w-full h-full"></svg></div>
-            <div class="h-48 config-panel p-4 flex gap-6 overflow-x-auto border-t border-slate-800">
-                <div class="min-w-[200px] space-y-2 border-r border-slate-700 pr-6">
-                    <p class="text-[10px] font-black text-blue-400 mb-2 uppercase tracking-tighter">Base Yield Config</p>
-                    <div class="grid grid-cols-2 gap-2 text-[11px]">
-                        <span>제재소</span><select id="cfg-w" onchange="calculate()" class="bg-slate-900 border border-slate-700 px-1"><option value="15">15</option><option value="30">30</option><option value="75">75</option><option value="150" selected>150</option><option value="300">300</option></select>
-                        <span>채석장</span><select id="cfg-s" onchange="calculate()" class="bg-slate-900 border border-slate-700 px-1"><option value="10">10</option><option value="20">20</option><option value="50">50</option><option value="100" selected>100</option><option value="200">200</option></select>
-                        <span>대장간</span><select id="cfg-m" onchange="calculate()" class="bg-slate-900 border border-slate-700 px-1"><option value="5">5</option><option value="10">10</option><option value="25">25</option><option value="50" selected>50</option><option value="100">100</option></select>
-                        <span>농장</span><select id="cfg-f" onchange="calculate()" class="bg-slate-900 border border-slate-700 px-1"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="5" selected>5</option><option value="6">6</option></select>
+        <main class="relative flex-grow bg-[#050814]">
+            <svg id="network-map" class="w-full h-full"></svg>
+            
+            <div class="absolute bottom-0 left-0 right-0 h-48 config-panel p-4 flex gap-6 overflow-x-auto">
+                <div class="min-w-[280px] space-y-2 border-r border-slate-700 pr-6">
+                    <p class="text-[10px] font-black text-yellow-500 mb-2 uppercase italic">Target Ratio & Bottleneck</p>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div id="ui-w" class="p-2 rounded bg-slate-900/50 border border-slate-700">
+                            <span class="text-[9px] text-slate-400">🪵 Wood (3.0)</span>
+                            <input type="number" id="sc-w" value="3" step="0.1" onchange="calculate()" class="block w-full bg-transparent text-sm font-bold outline-none">
+                            <div id="stat-w" class="text-[10px] mt-1 font-mono">-</div>
+                        </div>
+                        <div id="ui-s" class="p-2 rounded bg-slate-900/50 border border-slate-700">
+                            <span class="text-[9px] text-slate-400">🪨 Stone (2.0)</span>
+                            <input type="number" id="sc-s" value="2" step="0.1" onchange="calculate()" class="block w-full bg-transparent text-sm font-bold outline-none">
+                            <div id="stat-s" class="text-[10px] mt-1 font-mono">-</div>
+                        </div>
+                        <div id="ui-m" class="p-2 rounded bg-slate-900/50 border border-slate-700">
+                            <span class="text-[9px] text-slate-400">⚔️ Metal (1.0)</span>
+                            <input type="number" id="sc-m" value="1" step="0.1" onchange="calculate()" class="block w-full bg-transparent text-sm font-bold outline-none">
+                            <div id="stat-m" class="text-[10px] mt-1 font-mono">-</div>
+                        </div>
+                        <div id="ui-p" class="p-2 rounded bg-slate-900/50 border border-slate-700">
+                            <span class="text-[9px] text-slate-400">🧪 Petri (0.025)</span>
+                            <input type="number" id="sc-p" value="0.025" step="0.001" onchange="calculate()" class="block w-full bg-transparent text-sm font-bold outline-none">
+                            <div id="stat-p" class="text-[10px] mt-1 font-mono">-</div>
+                        </div>
                     </div>
                 </div>
-                <div class="min-w-[140px] space-y-2 border-r border-slate-700 pr-6">
-                    <p class="text-[10px] font-black text-emerald-400 mb-2 uppercase tracking-tighter">Bonus Rate</p>
-                    <div class="grid grid-cols-2 gap-2 text-[11px]">
-                        <span>학술원</span><select id="cfg-acad" onchange="calculate()" class="bg-slate-900 border border-slate-700 px-1"><option value="0.05">5%</option><option value="0.07">7%</option><option value="0.10" selected>10%</option></select>
-                        <span>시장</span><select id="cfg-mkt" onchange="calculate()" class="bg-slate-900 border border-slate-700 px-1"><option value="0.05">5%</option><option value="0.07">7%</option><option value="0.10" selected>10%</option></select>
+
+                <div class="min-w-[150px] space-y-2 border-r border-slate-700 pr-6">
+                    <p class="text-[10px] font-black text-blue-400 mb-2 uppercase">Base Yield</p>
+                    <div class="grid grid-cols-2 gap-2 text-[10px]">
+                        <span>🪵 Wood</span><input type="number" id="cfg-w" value="150" onchange="calculate()" class="w-full bg-slate-900 border border-slate-700 px-1">
+                        <span>🪨 Stone</span><input type="number" id="cfg-s" value="100" onchange="calculate()" class="w-full bg-slate-900 border border-slate-700 px-1">
+                        <span>⚔️ Metal</span><input type="number" id="cfg-m" value="50" onchange="calculate()" class="w-full bg-slate-900 border border-slate-700 px-1">
+                        <span>🌾 Food</span><input type="number" id="cfg-f" value="5" onchange="calculate()" class="w-full bg-slate-900 border border-slate-700 px-1">
                     </div>
                 </div>
+
                 <div class="flex-grow flex flex-col">
                     <p class="text-[10px] font-black text-slate-500 mb-1 uppercase">Building Dictionary</p>
-                    <textarea id="json-editor" class="flex-grow w-full p-2 text-[10px] rounded bg-black/50 border border-slate-800 text-emerald-500 outline-none" spellcheck="false"></textarea>
-                    <button onclick="applyDictionary()" class="mt-1 bg-slate-700 hover:bg-blue-600 text-[10px] font-bold py-1 rounded transition">코드 데이터 동기화</button>
+                    <textarea id="json-editor" class="flex-grow w-full p-2 text-[10px] rounded bg-black/50 border border-slate-800 text-emerald-500 outline-none font-mono" spellcheck="false"></textarea>
+                    <button onclick="applyDictionary()" class="mt-1 bg-slate-700 hover:bg-blue-600 text-[10px] font-bold py-1 rounded transition">데이터 동기화</button>
                 </div>
             </div>
         </main>
 
-        <aside class="w-72 editor-glass flex flex-col z-20 shadow-2xl">
+        <aside class="w-72 bg-slate-950 border-l border-slate-800 flex flex-col z-20 shadow-2xl">
             <div class="p-5 border-b border-white/5">
-                <h2 class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Inspector</h2>
-                <p id="selected-name" class="text-lg font-bold text-white italic">도시를 선택하세요</p>
-                <div id="boost-option-container" class="mt-2 hidden">
-                    <label class="inline-flex items-center gap-2 bg-blue-500/10 border border-blue-500/30 px-3 py-1.5 rounded-lg cursor-pointer hover:bg-blue-500/20 transition w-full">
-                        <input type="checkbox" id="boost-check" onchange="updateBoost()" class="accent-blue-500"><span class="text-[11px] font-bold text-blue-400">지역 특수 부스트 (+15%)</span>
-                    </label>
-                </div>
+                <h2 class="text-[10px] font-black text-slate-500 mb-1 uppercase">City Inspector</h2>
+                <p id="selected-name" class="text-lg font-bold">도시를 선택하세요</p>
             </div>
-            <div id="editor-slots" class="p-5 space-y-1.5 flex-grow overflow-y-auto"></div>
-            <div id="city-local-res" class="p-5 bg-blue-600/5 border-t border-blue-500/20 min-h-[160px]"><div id="local-output-display"></div></div>
+            <div id="editor-slots" class="p-5 space-y-2 flex-grow overflow-y-auto"></div>
+            <div id="local-output-display" class="p-5 bg-slate-900 border-t border-slate-800 min-h-[160px]"></div>
         </aside>
     </div>
 
@@ -79,29 +103,49 @@
         const cityInfo = { "포스배로우": {"type": "국경", "adj": ["피나라", "하이 실버미어"]}, "호크스톤": {"type": "산간", "adj": ["하이 실버미어", "유웬데일"]}, "유웬데일": {"type": "산간", "adj": ["호크스톤", "하이 실버미어", "멜트리지"]}, "피나라": {"type": "산간", "adj": ["포스배로우", "하이 실버미어", "던홀드"]}, "하이 실버미어": {"type": "산간", "adj": ["포스배로우", "호크스톤", "유웬데일", "피나라", "위대한 도시", "잔델"]}, "멜트리지": {"type": "국경", "adj": ["유웬데일", "잔델"]}, "위대한 도시": {"type": "수도", "adj": ["하이 실버미어", "던홀드", "틸번"]}, "잔델": {"type": "중심지", "adj": ["하이 실버미어", "멜트리지", "클라우드필드", "헤이니스", "틸번"]}, "클라우드필드": {"type": "국경", "adj": ["잔델", "헤이니스", "테르비시아"]}, "틸번": {"type": "중심지", "adj": ["위대한 도시", "잔델", "브룩할로우"]}, "헤이니스": {"type": "중심지", "adj": ["잔델", "클라우드필드"]}, "바스카시아": {"type": "중심지", "adj": ["던홀드", "브룩할로우", "이븐무어"]}, "브룩할로우": {"type": "중심지", "adj": ["틸번", "바스카시아", "이븐무어", "테르비시아"]}, "테르비시아": {"type": "국경", "adj": ["브룩할로우", "클라우드필드"]}, "이븐무어": {"type": "산간", "adj": ["바스카시아", "브룩할로우"]}, "던홀드": {"type": "국경", "adj": ["피나라", "위대한 도시", "바스카시아"]} };
         const buildingList = ["비어있음", "제재소", "채석장", "대장간", "농장", "제련소", "학술원", "시장", "병영", "성소", "왕실무기고", "듀란드의공방"];
         const heroList = ["없음", "뽀삐", "갈리오", "모르가나", "케일", "가렌", "소나"];
-        let currentBuilds = {}; let cityBoosts = { "위대한 도시": false, "피나라": false, "던홀드": false };
-
-        const initialRawDict = `city_builds = { "포스배로우": ["대장간", "대장간", "대장간", "대장간", "대장간", "대장간", "없음"], "호크스톤": ["채석장", "채석장", "채석장", "채석장", "채석장", "채석장", "없음"], "피나라": ["채석장", "채석장", "채석장", "채석장", "채석장", "채석장", "뽀삐"], "하이 실버미어": ["시장", "시장", "시장", "시장", "시장", "시장", "없음"], "유웬데일": ["채석장", "채석장", "채석장", "채석장", "채석장", "채석장", "갈리오"], "멜트리지": ["대장간", "대장간", "대장간", "대장간", "대장간", "대장간", "없음"], "위대한 도시": ["병영", "제련소", "제련소", "제련소", "제련소", "제련소", "모르가나"], "잔델": ["시장", "시장", "시장", "시장", "시장", "시장", "없음"], "클라우드필드": ["대장간", "대장간", "대장간", "대장간", "대장간", "대장간", "없음"], "헤이니스": ["제재소", "제재소", "제재소", "제재소", "제재소", "제재소", "케일"], "틸번": ["제재소", "제재소", "제재소", "제재소", "제재소", "제련소", "가렌"], "바스카시아": ["제재소", "제재소", "제재소", "제재소", "제재소", "농장", "소나"], "브룩할로우": ["제재소", "제재소", "시장", "시장", "시장", "시장", "없음"], "테르비시아": ["대장간", "대장간", "대장간", "대장간", "대장간", "대장간", "없음"], "이븐무어": ["채석장", "듀란드의공방", "성소", "왕실무기고", "농장", "농장", "없음"], "던홀드": ["제련소", "제련소", "제련소", "제련소", "제련소", "제련소", "뽀삐"] }`;
-
         const typeColors = { "수도": "#a855f7", "국경": "#ef4444", "산간": "#f59e0b", "중심지": "#10b981" };
-        const rowStep = 135; const colStep = 240; const offsetX = 100; const offsetY = 80;
-        let svg, g, zoom;
+        const resColors = { w: "#10b981", s: "#f59e0b", m: "#ef4444", f: "#fbbf24", p: "#a855f7" };
+        
+        let currentBuilds = {};
+        let svg, g;
 
         function init() {
             svg = d3.select("#network-map"); g = svg.append("g");
-            zoom = d3.zoom().scaleExtent([0.1, 2.5]).on("zoom", (e) => g.attr("transform", e.transform)); svg.call(zoom);
-            document.getElementById('json-editor').value = initialRawDict;
+            const zoom = d3.zoom().scaleExtent([0.1, 2.5]).on("zoom", (e) => g.attr("transform", e.transform));
+            svg.call(zoom);
+            document.getElementById('json-editor').value = `city_builds = {
+    "포스배로우": ["대장간", "대장간", "대장간", "대장간", "대장간", "대장간", "뽀삐"],
+    "호크스톤": ["채석장", "채석장", "채석장", "채석장", "채석장", "채석장", "갈리오"],
+    "유웬데일": [ "채석장", "채석장", "채석장", "채석장", "채석장", "채석장", "없음" ],
+    "피나라": [ "채석장", "채석장", "채석장", "채석장", "채석장", "채석장", "케일" ],
+    "하이 실버미어": [ "채석장", "시장", "시장", "시장", "시장", "시장", "없음" ],
+    "멜트리지": [ "대장간", "대장간", "대장간", "대장간", "대장간", "대장간", "없음" ],
+    "위대한 도시": [ "병영", "제련소", "제련소", "제련소", "제련소", "제련소", "없음" ],
+    "잔델": [ "제재소", "제재소", "제재소", "제재소", "제재소", "제재소", "소나" ],
+    "클라우드필드": [ "대장간", "학술원", "학술원", "학술원", "학술원", "학술원", "없음" ],
+    "틸번": [ "제재소", "제재소", "제재소", "제재소", "제재소", "제련소", "가렌" ],
+    "헤이니스": [ "제재소", "제재소", "제재소", "제재소", "제재소", "제재소", "없음" ],
+    "바스카시아": [ "제재소", "제재소", "제재소", "농장", "학술원", "듀란드의공방", "없음" ],
+    "브룩할로우": [ "학술원", "학술원", "학술원", "학술원", "학술원", "학술원", "없음" ],
+    "테르비시아": [ "대장간", "학술원", "학술원", "학술원", "학술원", "학술원", "없음" ],
+    "이븐무어": [ "채석장", "학술원", "농장", "농장", "왕실무기고", "성소", "없음" ],
+    "던홀드": [ "대장간", "제련소", "제련소", "제련소", "제련소", "제련소", "가렌" ]
+}`;
             applyDictionary();
-            const nodes = Object.keys(cityInfo).map(name => ({ id: name, type: cityInfo[name].type, y: cityCoords[name][0] * rowStep + offsetY, x: cityCoords[name][1] * colStep + offsetX }));
+            renderMap();
+            calculate();
+        }
+
+        function renderMap() {
+            const nodes = Object.keys(cityInfo).map(name => ({ id: name, type: cityInfo[name].type, y: cityCoords[name][0] * 135 + 80, x: cityCoords[name][1] * 240 + 100 }));
             const links = []; Object.keys(cityInfo).forEach(s => cityInfo[s].adj.forEach(t => { if(s < t) links.push({ x1: nodes.find(n => n.id === s).x, y1: nodes.find(n => n.id === s).y, x2: nodes.find(n => n.id === t).x, y2: nodes.find(n => n.id === t).y }); }));
             g.selectAll("line").data(links).enter().append("line").attr("class", "link").attr("x1", d => d.x1).attr("y1", d => d.y1).attr("x2", d => d.x2).attr("y2", d => d.y2);
             const nodeG = g.selectAll(".city-node").data(nodes).enter().append("g").attr("class", "city-node").attr("transform", d => `translate(${d.x},${d.y})`).on("click", (e, d) => selectCity(d.id));
             nodeG.append("circle").attr("r", 18).attr("fill", d => typeColors[d.type]).attr("class", "node-circle shadow-2xl");
             nodeG.append("text").attr("class", "city-label").attr("dy", -30).attr("text-anchor", "middle").text(d => d.id);
-            nodeG.append("text").attr("class", "hero-star").attr("dy", -30).attr("dx", 0);
+            nodeG.append("text").attr("class", "hero-star").attr("dy", -30);
             nodeG.append("text").attr("class", "build-info").attr("x", 25).attr("y", -8);
             nodeG.append("text").attr("class", "canvas-prod").attr("x", 25).attr("y", 10);
-            calculate();
         }
 
         function applyDictionary() {
@@ -114,8 +158,6 @@
 
         function selectCity(name) {
             document.getElementById('selected-name').innerText = name;
-            const bC = document.getElementById('boost-option-container');
-            if(["위대한 도시", "피나라", "던홀드"].includes(name)) { bC.classList.remove('hidden'); document.getElementById('boost-check').checked = cityBoosts[name]; } else { bC.classList.add('hidden'); }
             const container = document.getElementById('editor-slots'); container.innerHTML = "";
             const slots = currentBuilds[name] || Array(7).fill("비어있음");
             for(let i=0; i<6; i++) { container.innerHTML += `<select onchange="updateBuild('${name}', ${i}, this.value)" class="w-full bg-slate-800 border border-slate-700 rounded p-1.5 text-xs outline-none">${buildingList.map(t => `<option value="${t}" ${t === slots[i] ? 'selected' : ''}>${t}</option>`).join('')}</select>`; }
@@ -124,20 +166,22 @@
         }
 
         function updateBuild(city, i, val) { currentBuilds[city][i] = val; document.getElementById('json-editor').value = "city_builds = " + JSON.stringify(currentBuilds, null, 4); calculate(); }
-        function updateBoost() { cityBoosts[document.getElementById('selected-name').innerText] = document.getElementById('boost-check').checked; calculate(); }
 
         function calculate() {
-            const cfg = { w: +document.getElementById('cfg-w').value, s: +document.getElementById('cfg-s').value, m: +document.getElementById('cfg-m').value, f: +document.getElementById('cfg-f').value, acad: +document.getElementById('cfg-acad').value, mkt: +document.getElementById('cfg-mkt').value };
+            const cfg = { w: +document.getElementById('cfg-w').value, s: +document.getElementById('cfg-s').value, m: +document.getElementById('cfg-m').value, f: +document.getElementById('cfg-f').value, acad: 0.1, mkt: 0.1 };
+            const targets = { w: +document.getElementById('sc-w').value, s: +document.getElementById('sc-s').value, m: +document.getElementById('sc-m').value, p: +document.getElementById('sc-p').value };
             const acadBonusType = { "국경": 0, "산간": 0, "중심지": 0, "수도": 0 };
             Object.keys(currentBuilds).forEach(n => { acadBonusType[cityInfo[n].type] += (currentBuilds[n]||[]).filter(b => b === "학술원").length * cfg.acad; });
-            let totals = { w:0, s:0, m:0, p:0, f:0 }; const selectedName = document.getElementById('selected-name').innerText;
+            
+            let totals = { w:0, s:0, m:0, p:0, f:0 };
+            const selectedName = document.getElementById('selected-name').innerText;
 
             Object.keys(cityInfo).forEach(name => {
                 const info = cityInfo[name]; const builds = currentBuilds[name] || Array(7).fill("비어있음");
                 let mktB = builds.filter(b => b === "시장").length * cfg.mkt;
                 info.adj.forEach(a => mktB += (currentBuilds[a] || []).filter(b => b === "시장").length * cfg.mkt);
                 const hasHero = heroList.includes(builds[6]) && builds[6] !== "없음";
-                const mult = 1.0 + mktB + acadBonusType[info.type] + (hasHero ? 0.5 : 0) + (cityBoosts[name] ? 0.15 : 0);
+                const mult = 1.0 + mktB + acadBonusType[info.type] + (hasHero ? 0.5 : 0);
                 
                 let cw=0, cs=0, cm=0, cp=0, cf=0, qB=false, fB=false, fC=0;
                 builds.slice(0, 6).forEach(b => {
@@ -154,7 +198,6 @@
                 const bCounts = {}; builds.filter(b => b!=="비어있음" && b!=="없음").forEach(b => bCounts[b] = (bCounts[b] || 0) + 1);
                 node.select(".build-info").text(Object.entries(bCounts).map(([k,v]) => `${k}${v>1?v:''}`).join(', '));
                 
-                // 모든 생산 자원 표시 로직 수정
                 let prodLines = [];
                 if(cw > 0) prodLines.push(`🪵${Math.round(cw)}`);
                 if(cs > 0) prodLines.push(`🪨${Math.round(cs)}`);
@@ -162,23 +205,42 @@
                 if(cp > 0) prodLines.push(`🧪${cp}`);
                 if(cf > 0) prodLines.push(`🌾${cf}`);
                 node.select(".canvas-prod").text(prodLines.join(' '));
-                
-                const labelWidth = name.length * 15;
-                node.select(".hero-star").text(hasHero ? "★" : "").attr("dx", (labelWidth/2) + 10);
+                node.select(".hero-star").text(hasHero ? "★" : "").attr("dx", (name.length * 7.5) + 10);
 
                 if(name === selectedName) {
                     document.getElementById('local-output-display').innerHTML = `
-                        <div class="flex justify-between items-end mb-1"><span class="text-slate-500 text-[10px]">WOOD</span><span class="text-xl font-black text-amber-500">${Math.round(cw).toLocaleString()}</span></div>
-                        <div class="flex justify-between items-end mb-1"><span class="text-slate-500 text-[10px]">STONE</span><span class="text-xl font-black text-slate-300">${Math.round(cs).toLocaleString()}</span></div>
-                        <div class="flex justify-between items-end mb-1"><span class="text-slate-500 text-[10px]">METAL</span><span class="text-xl font-black text-blue-500">${Math.round(cm).toLocaleString()}</span></div>
-                        <div class="flex justify-between items-end mb-1"><span class="text-slate-500 text-[10px]">PETRI / FOOD</span><span class="text-lg font-black text-purple-400">${cp} / ${cf}</span></div>
-                        <div class="flex justify-between items-end mt-2 pt-2 border-t border-white/5"><span class="text-slate-500 text-[10px]">TOTAL EFF</span><span class="text-lg font-black text-emerald-400">x${mult.toFixed(2)}</span></div>`;
+                        <div class="space-y-1">
+                            <div class="flex justify-between text-xs"><span>🪵 Wood</span><span style="color:${resColors.w}">${Math.round(cw).toLocaleString()}</span></div>
+                            <div class="flex justify-between text-xs"><span>🪨 Stone</span><span style="color:${resColors.s}">${Math.round(cs).toLocaleString()}</span></div>
+                            <div class="flex justify-between text-xs"><span>⚔️ Metal</span><span style="color:${resColors.m}">${Math.round(cm).toLocaleString()}</span></div>
+                            <div class="flex justify-between text-xs"><span>🧪 Petri</span><span style="color:${resColors.p}">${cp}</span></div>
+                            <div class="flex justify-between text-xs"><span>🌾 Food</span><span style="color:${resColors.f}">${cf}</span></div>
+                            <div class="mt-2 pt-2 border-t border-white/10 text-[10px] text-blue-400 font-bold">EFFICIENCY: x${mult.toFixed(2)}</div>
+                        </div>`;
                 }
             });
 
-            const cards = [{l: 'WOOD', v: Math.round(totals.w), c: 'text-amber-500'}, {l: 'STONE', v: Math.round(totals.s), c: 'text-slate-300'}, {l: 'METAL', v: Math.round(totals.m), c: 'text-blue-500'}, {l: 'PETRI', v: totals.p, c: 'text-purple-400'}, {l: 'FOOD', v: totals.f, c: 'text-emerald-500'}];
-            document.getElementById('total-summary').innerHTML = cards.map(card => `<div class="res-card"><p class="text-[8px] font-black text-slate-500 tracking-widest mb-0.5">${card.l}</p><p class="text-lg font-black ${card.c} font-mono">${card.v.toLocaleString()}</p></div>`).join('');
-            document.getElementById('ratio-info').innerText = `RATIO — W ${(totals.w / (totals.m || 1)).toFixed(1)} : S ${(totals.s / (totals.m || 1)).toFixed(1)} : M 1.0`;
+            const caps = { w: totals.w / targets.w, s: totals.s / targets.s, m: totals.m / targets.m, p: totals.p / targets.p };
+            const minCap = Math.min(caps.w, caps.s, caps.m, caps.p);
+            document.getElementById('final-score').innerText = Math.floor(minCap).toLocaleString();
+
+            Object.keys(caps).forEach(k => {
+                const el = document.getElementById(`stat-${k}`);
+                const ui = document.getElementById(`ui-${k}`);
+                const isBottleneck = caps[k] === minCap;
+                el.innerText = `Cap: ${Math.floor(caps[k]).toLocaleString()}`;
+                if(isBottleneck) { ui.classList.add('bottleneck'); el.classList.add('bottleneck-text'); el.innerText += " (LOWEST)"; }
+                else { ui.classList.remove('bottleneck'); el.classList.remove('bottleneck-text'); }
+            });
+
+            const summary = [
+                {l:'WOOD', v:Math.round(totals.w), c:resColors.w}, 
+                {l:'STONE', v:Math.round(totals.s), c:resColors.s}, 
+                {l:'METAL', v:Math.round(totals.m), c:resColors.m}, 
+                {l:'PETRI', v:totals.p, c:resColors.p},
+                {l:'FOOD', v:totals.f, c:resColors.f}
+            ];
+            document.getElementById('total-summary').innerHTML = summary.map(s => `<div class="res-card"><p class="text-[8px] font-black text-slate-500 uppercase">${s.l}</p><p class="text-lg font-black font-mono" style="color:${s.c}">${s.v.toLocaleString()}</p></div>`).join('');
         }
         window.onload = init;
     </script>
