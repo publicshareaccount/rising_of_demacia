@@ -178,7 +178,7 @@
 
             Object.keys(cityInfo).forEach(name => {
                 const info = cityInfo[name]; const builds = currentBuilds[name] || Array(7).fill("비어있음");
-                let mktB = builds.filter(b => b === "시장").length * cfg.mkt;
+                let mktB = 0;
                 info.adj.forEach(a => mktB += (currentBuilds[a] || []).filter(b => b === "시장").length * cfg.mkt);
                 const hasHero = heroList.includes(builds[6]) && builds[6] !== "없음";
                 const mult = 1.0 + mktB + acadBonusType[info.type] + (hasHero ? 0.5 : 0);
@@ -246,3 +246,4 @@
     </script>
 </body>
 </html>
+
