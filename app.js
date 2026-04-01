@@ -414,7 +414,7 @@ function calculate() {
         let mktB = 0;
         info.adj.forEach(a => { mktB += (currentBuilds[a] || []).filter(b => b === "시장").length * cfg.mkt; });
         const hasHero = heroList.includes(builds[6]) && builds[6] !== "없음";
-        let mult = 1.0 + mktB + acadBonusType[info.type] + (hasHero ? 0.5 : 0);
+        let mult = 1.0 + mktB + acadBonusType[info.type] + (hasHero ? 0.25 : 0);
         if (currentPatchVersion === "26.7" && (name === "피나라" || name === "위대한 도시" || name === "던홀드")) {
             mult += 0.15; // 26.7 전용 보너스
         }
